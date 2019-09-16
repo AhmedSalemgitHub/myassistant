@@ -1,9 +1,7 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:myassistant/GUI/student_input_screen.dart';
 import 'package:myassistant/models/student.dart';
 import 'package:myassistant/utils/database_helper_students.dart';
-import 'package:path_provider/path_provider.dart';
 
 class Home extends StatefulWidget {
   //final myPassedData;
@@ -21,8 +19,13 @@ class _HomeState extends State<Home> {
   StudentDatabaseHelper db = StudentDatabaseHelper();
 
   @override
+  void dispose() {
+db.dbClose();
+super.dispose();
+  }
+  @override
   void initState() {
-    db.initDB();
+    super.initState();
     db.getAll().then((students) {
       setState(() {
         students.forEach((students) {
@@ -30,7 +33,7 @@ class _HomeState extends State<Home> {
         });
       });
     });
-    super.initState();
+
   }
 
   @override
@@ -47,30 +50,44 @@ class _HomeState extends State<Home> {
             color: Colors.yellow,
             child: ListTile(
               title: Text('${items[position].name}'),
+              subtitle: Text('class: ${items[position].classRoom} - telephone: ${items[position].mobile}'),
               trailing: IconButton(
-                  icon:Icon( Icons.delete_forever,color: Colors.red,),
-                  onPressed: _delete(items[position],position)),
-            ),
+                icon: Icon(Icons.delete_forever),
+                onPressed: (){
+                  setState(() {
+                    db.deleteStudent(items[position].id);
+                    items.removeAt(position);
+                  });
+                },
+              ),
+              onTap: (){},
+            )
           );
         },
       ),
+
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(context, MaterialPageRoute(
-            builder: (context){
-              return StudentInputScreen(Student("","","",0));
-            }
-          ));
+        child: Icon(Icons.add),
+        onPressed: ()async {
+          String result = await Navigator.push(context,
+              MaterialPageRoute(
+                builder: (context)=> StudentInputScreen(Student("", "", "", 0)),
+              ),
+          );
+
+          if(result == 'save'){
+            db.getAll().then((students){
+              setState(() {
+                items.clear();
+                students.forEach((student){
+                  items.add(Student.fromMap(student));
+                });
+              });
+            });
+          }
         },
+
       ),
     );
-  }
-
-  _delete(Student student,int position) async{
-    db.deleteStudent(student.id).then((student){
-      setState(() {
-        items.removeAt(position);
-      });
-    });
   }
 }
